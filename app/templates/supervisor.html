@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Supervisor Dashboard</h1>
+    <h3>Welcome, {{ current_user.username }}!</h3>
+
+    <div class="container">
+        <div class="column">
+            <h2>Your Status</h2>
+            <p><strong>Total Assigned Hours:</strong> {{ total_hours }} / 30</p>
+            {% if total_hours >= 30 %}
+                <p style="color: green;">Your schedule is complete.</p>
+            {% else %}
+                <p style="color: orange;">You need {{ 30 - total_hours }} more hours.</p>
+            {% endif %}
+
+            <h2>Your Current Assignments</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Assignment</th>
+                        <th>Hours</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td>
+                            {% if assignment.school %}
+                                {{ assignment.school.name }}
+                            {% else %}
+                                {{ assignment.description }}
+                            {% endif %}
+                        </td>
+                        <td>{{ assignment.assigned_hours }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="2">You have no assignments yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="column">
+            <h2>Choose a School</h2>
+            <p>Select a school from the list below to add to your schedule.</p>
+            <form action="{{ url_for('supervisor_assign_school') }}" method="post" novalidate>
+                {{ form.hidden_tag() }}
+                <p>
+                    {{ form.school.label }}<br>
+                    {{ form.school() }}
+                </p>
+                <p>{{ form.submit() }}</p>
+            </form>
+        </div>
+    </div>
+{% endblock %}

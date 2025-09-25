@@ -1,7 +1,7 @@
 from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_user, logout_user, current_user, login_required
 from app import app, db
-from app.forms import LoginForm, UserForm, SchoolForm, AssignmentForm, AssignFromPoolForm
+from app.forms import LoginForm, UserForm, SchoolForm, AssignmentForm, AssignFromPoolForm, SupervisorAssignmentForm
 from app.models import User, School, Assignment, UnusedHour
 from urllib.parse import urlparse
 from sqlalchemy import func
@@ -33,7 +33,76 @@ def logout():
 @login_required
 def index():
     if current_user.role == 'admin':
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('coordinator_dashboard'))
+    elif current_user.role == 'supervisor':
+        return redirect(url_for('supervisor_dashboard'))
+
+    # Fallback for a potential 'coordinator' role or misconfiguration
+    return redirect(url_for('login'))
+
+@app.route('/dashboard/supervisor')
+@login_required
+def supervisor_dashboard():
+    if current_user.role != 'supervisor':
+        flash('You do not have permission to access this page.')
+        return redirect(url_for('index'))
+
+    form = SupervisorAssignmentForm()
+
+    total_hours = db.session.query(func.sum(Assignment.assigned_hours)).filter_by(user_id=current_user.id).scalar() or 0
+    assignments = Assignment.query.filter_by(user_id=current_user.id).all()
+
+    return render_template('supervisor.html', title='Supervisor Dashboard', form=form, assignments=assignments, total_hours=total_hours)
+
+
+@app.route('/supervisor/assign', methods=['POST'])
+@login_required
+def supervisor_assign_school():
+    if current_user.role != 'supervisor':
+        flash('You do not have permission to perform this action.')
+        return redirect(url_for('index'))
+
+    form = SupervisorAssignmentForm()
+    if form.validate_on_submit():
+        school_id = form.school.data
+        school = School.query.get(school_id)
+        user = current_user
+
+        # Re-using the same logic as the coordinator's assignment
+        current_hours = db.session.query(func.sum(Assignment.assigned_hours)).filter_by(user_id=user.id).scalar() or 0
+        if current_hours >= 30:
+            flash('You already have 30 or more hours.')
+            return redirect(url_for('supervisor_dashboard'))
+
+        total_after_assign = current_hours + school.required_hours
+        if total_after_assign > 32:
+            flash(f'Cannot assign {school.name}. This would exceed the 32-hour weekly limit.')
+            return redirect(url_for('supervisor_dashboard'))
+
+        # Assign school and handle unused hours
+        assignment = Assignment(user_id=user.id, school_id=school.id, assigned_hours=school.required_hours)
+        db.session.add(assignment)
+
+        if total_after_assign > 30:
+            unused = total_after_assign - 30
+            unused_hour_entry = UnusedHour(school_id=school.id, hours=unused)
+            db.session.add(unused_hour_entry)
+            flash(f'{unused} hour(s) from this assignment have been added to the unused pool.')
+
+        db.session.commit()
+        flash(f'You have successfully chosen {school.name}.')
+    else:
+        flash('There was an error with your selection.')
+
+    return redirect(url_for('supervisor_dashboard'))
+
+
+@app.route('/dashboard/coordinator')
+@login_required
+def coordinator_dashboard():
+    if current_user.role != 'admin':
+        flash('You do not have permission to access this page.')
+        return redirect(url_for('index'))
 
     form = AssignmentForm()
 
@@ -55,7 +124,7 @@ def index():
     unused_hours = UnusedHour.query.all()
     pool_form = AssignFromPoolForm()
 
-    return render_template('index.html', title='Coordinator Dashboard', form=form, supervisors=supervisors, assignments=assignments, unused_hours=unused_hours, pool_form=pool_form)
+    return render_template('coordinator.html', title='Coordinator Dashboard', form=form, supervisors=supervisors, assignments=assignments, unused_hours=unused_hours, pool_form=pool_form)
 
 @app.route('/assign_from_pool', methods=['POST'])
 @login_required

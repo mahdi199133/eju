@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, IntegerField
 from wtforms.validators import DataRequired
-from app.models import User, School
+from app.models import User, School, Assignment
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -34,3 +34,13 @@ class AssignFromPoolForm(FlaskForm):
     user_id = IntegerField('User ID', validators=[DataRequired()])
     hours = IntegerField('Hours to Assign', validators=[DataRequired()])
     submit = SubmitField('Assign from Pool')
+
+class SupervisorAssignmentForm(FlaskForm):
+    school = SelectField('Available Schools', coerce=int, validators=[DataRequired()])
+    submit = SubmitField('Choose School')
+
+    def __init__(self, *args, **kwargs):
+        super(SupervisorAssignmentForm, self).__init__(*args, **kwargs)
+        # Populate with schools that are not fully assigned
+        assigned_schools = [a.school_id for a in Assignment.query.filter(Assignment.school_id.isnot(None)).all()]
+        self.school.choices = [(s.id, f"{s.name} ({s.required_hours} hrs)") for s in School.query.filter(~School.id.in_(assigned_schools)).all()]
