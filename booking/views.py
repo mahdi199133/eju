@@ -1,10 +1,10 @@
 from rest_framework.views import APIView
-from rest_framework.generics import ListCreateAPIView, ListAPIView, CreateAPIView
+from rest_framework.generics import ListCreateAPIView, ListAPIView, CreateAPIView, UpdateAPIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.core.cache import cache
 from .models import CustomUser, Salon, Booking, Payment
-from .serializers import SalonSerializer, BookingSerializer, BookingCreateSerializer
+from .serializers import SalonSerializer, BookingSerializer, BookingCreateSerializer, BookingUpdateSerializer
 from django.utils import timezone
 import uuid
 from decimal import Decimal
@@ -28,6 +28,7 @@ class SendOTPView(APIView):
         otp = str(random.randint(100000, 999999))
         cache.set(phone_number, otp, timeout=300)
 
+        # In a real app, this would be sent via SMS
         print(f"Generated OTP for {phone_number}: {otp}")
         return Response({'message': 'OTP sent successfully.', 'otp': otp}, status=status.HTTP_200_OK)
 
@@ -65,6 +66,22 @@ class BookingCreateView(CreateAPIView):
         total_cost = Decimal(duration_hours) * salon.price_per_hour
         serializer.save(user=self.request.user, total_cost=total_cost, status='PENDING')
 
+class UpdateBookingView(UpdateAPIView):
+    queryset = Booking.objects.all()
+    serializer_class = BookingUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_url_kwarg = 'booking_id'
+
+    def get_queryset(self):
+        return Booking.objects.filter(user=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        instance.status = 'PENDING'
+        duration_hours = (instance.end_time - instance.start_time).total_seconds() / 3600
+        instance.total_cost = Decimal(duration_hours) * instance.salon.price_per_hour
+        instance.save()
+
 class UserBookingListView(ListAPIView):
     serializer_class = BookingSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -91,3 +108,25 @@ class SimulatePaymentView(APIView):
             transaction_id=f"txn_{uuid.uuid4()}"
         )
         return Response({"message": "Payment successful!", "booking_status": "PAID"}, status=status.HTTP_200_OK)
+
+class CancelBookingView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, booking_id):
+        try:
+            booking = Booking.objects.get(id=booking_id, user=request.user)
+        except Booking.DoesNotExist:
+            return Response({"error": "Booking not found or access denied."}, status=status.HTTP_404_NOT_FOUND)
+
+        if booking.status not in ['PENDING', 'APPROVED']:
+            return Response(
+                {"error": f"Cannot cancel a booking with status '{booking.status}'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        booking.status = 'CANCELED'
+        booking.save()
+
+        print(f"Booking ID {booking.id} was canceled by the user.")
+
+        return Response({"message": "Booking canceled successfully.", "booking_status": "CANCELED"}, status=status.HTTP_200_OK)

@@ -60,6 +60,7 @@ class Booking(models.Model):
     end_time = models.DateTimeField(verbose_name="زمان پایان")
     total_cost = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="هزینه کل")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING', verbose_name="وضعیت")
+    contract_details = models.TextField(blank=True, verbose_name="مفاد قرارداد")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

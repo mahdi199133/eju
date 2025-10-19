@@ -25,3 +25,8 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = ['salon', 'start_time', 'end_time']
+
+class BookingUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Booking
+        fields = ['start_time', 'end_time']

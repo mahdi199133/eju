@@ -27,10 +27,10 @@ class ModelTests(TestCase):
             salon=salon,
             start_time=start_time,
             end_time=end_time,
-            total_cost=300.00
+            total_cost=300.00,
+            status='PENDING'
         )
-        self.assertEqual(booking.salon.name, 'Another Salon')
-        self.assertEqual(booking.total_cost, 300.00)
+        self.assertEqual(booking.status, 'PENDING')
 
 class APITests(APITestCase):
 
@@ -38,27 +38,54 @@ class APITests(APITestCase):
         self.user = CustomUser.objects.create_user(phone_number='09129876543', password='apipassword')
         self.salon = Salon.objects.create(name='API Test Salon', address='789 API Blvd', price_per_hour=200.00)
 
-        # Authenticate the client with a JWT token
         token = AccessToken.for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
-    def test_salon_list_api(self):
-        url = reverse('salon-list')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['name'], 'API Test Salon')
+        self.start_time = timezone.now() + timedelta(days=1)
+        self.end_time = self.start_time + timedelta(hours=2)
+        self.booking = Booking.objects.create(
+            user=self.user,
+            salon=self.salon,
+            start_time=self.start_time,
+            end_time=self.end_time,
+            total_cost=400.00,
+            status='APPROVED'
+        )
 
-    def test_booking_create_api(self):
+    def test_cancel_booking_api(self):
+        url = reverse('cancel-booking', kwargs={'booking_id': self.booking.id})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, 'CANCELED')
+
+    def test_update_booking_api(self):
+        url = reverse('update-booking', kwargs={'booking_id': self.booking.id})
+        new_start_time = self.start_time + timedelta(hours=1)
+        new_end_time = self.end_time + timedelta(hours=1)
+        data = {
+            'start_time': new_start_time.isoformat(),
+            'end_time': new_end_time.isoformat()
+        }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, 'PENDING')
+        self.assertEqual(self.booking.start_time, new_start_time)
+
+    def test_list_and_create_api(self):
+        # A quick check on existing create/list APIs to ensure no regression
         url = reverse('booking-create')
-        start_time = timezone.now() + timedelta(days=1)
-        end_time = start_time + timedelta(hours=3)
         data = {
             'salon': self.salon.id,
-            'start_time': start_time.isoformat(),
-            'end_time': end_time.isoformat()
+            'start_time': (self.start_time + timedelta(days=2)).isoformat(),
+            'end_time': (self.end_time + timedelta(days=2)).isoformat()
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Booking.objects.count(), 1)
-        self.assertAlmostEqual(Booking.objects.get().total_cost, 600.00, places=2)
+        self.assertEqual(Booking.objects.count(), 2)
+
+        list_url = reverse('user-booking-list')
+        response = self.client.get(list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)

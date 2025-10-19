@@ -55,5 +55,22 @@
             loadUserBookings();
         });
     </script>
+
+    <!-- Edit Booking Modal -->
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeEditModal()">&times;</span>
+            <h2>ویرایش رزرو</h2>
+            <form id="edit-booking-form" onsubmit="updateBooking(event)">
+                <input type="hidden" id="edit-booking-id">
+                <label for="edit-start-time">زمان شروع جدید:</label>
+                <input type="datetime-local" id="edit-start-time" required>
+                <label for="edit-end-time">زمان پایان جدید:</label>
+                <input type="datetime-local" id="edit-end-time" required>
+                <button type="submit">ذخیره تغییرات</button>
+            </form>
+            <p id="edit-message"></p>
+        </div>
+    </div>
 </body>
 </html>
