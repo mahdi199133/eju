@@ -1,5 +1,5 @@
 from rest_framework.views import APIView
-from rest_framework.generics import ListAPIView, CreateAPIView
+from rest_framework.generics import ListCreateAPIView, ListAPIView, CreateAPIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.core.cache import cache
@@ -40,18 +40,15 @@ class VerifyOTPView(APIView):
             return Response({'error': 'Phone number and OTP are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         otp_cached = cache.get(phone_number)
-        if not otp_cached:
-            return Response({'error': 'OTP has expired or is invalid.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if otp_entered == otp_cached:
-            cache.delete(phone_number)
-            user, created = CustomUser.objects.get_or_create(phone_number=phone_number)
-            tokens = get_tokens_for_user(user)
-            return Response(tokens, status=status.HTTP_200_OK)
-        else:
+        if not otp_cached or otp_entered != otp_cached:
             return Response({'error': 'Invalid OTP.'}, status=status.HTTP_400_BAD_REQUEST)
 
-class SalonListView(ListAPIView):
+        cache.delete(phone_number)
+        user, created = CustomUser.objects.get_or_create(phone_number=phone_number)
+        tokens = get_tokens_for_user(user)
+        return Response(tokens, status=status.HTTP_200_OK)
+
+class SalonListView(ListCreateAPIView):
     queryset = Salon.objects.all()
     serializer_class = SalonSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -64,10 +61,8 @@ class BookingCreateView(CreateAPIView):
         salon = serializer.validated_data['salon']
         start_time = serializer.validated_data['start_time']
         end_time = serializer.validated_data['end_time']
-
         duration_hours = (end_time - start_time).total_seconds() / 3600
         total_cost = Decimal(duration_hours) * salon.price_per_hour
-
         serializer.save(user=self.request.user, total_cost=total_cost, status='PENDING')
 
 class UserBookingListView(ListAPIView):
@@ -86,15 +81,13 @@ class SimulatePaymentView(APIView):
             return Response({"error": "Booking not found or access denied."}, status=status.HTTP_404_NOT_FOUND)
 
         if booking.status != 'APPROVED':
-            return Response({"error": f"Booking is not in APPROVED state. Current state: {booking.status}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": f"Booking not in APPROVED state."}, status=status.HTTP_400_BAD_REQUEST)
 
         booking.status = 'PAID'
         booking.save()
-
         Payment.objects.create(
             booking=booking,
             amount=booking.total_cost,
             transaction_id=f"txn_{uuid.uuid4()}"
         )
-
         return Response({"message": "Payment successful!", "booking_status": "PAID"}, status=status.HTTP_200_OK)
