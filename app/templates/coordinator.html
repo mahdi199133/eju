@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Coordinator Dashboard</h1>
+
+    <div class="container">
+        <div class="column">
+            <h2>Assign School to Supervisor</h2>
+            <form action="{{ url_for('assign_school') }}" method="post" novalidate>
+                {{ form.hidden_tag() }}
+                <p>
+                    {{ form.user.label }}<br>
+                    {{ form.user() }}
+                </p>
+                <p>
+                    {{ form.school.label }}<br>
+                    {{ form.school() }}
+                </p>
+                <p>{{ form.submit() }}</p>
+            </form>
+        </div>
+        <div>
+            <h2>Unused Hours Pool</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>School</th>
+                        <th>Hours Available</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for uh in unused_hours %}
+                    <tr>
+                        <td>{{ uh.school.name }}</td>
+                        <td>{{ uh.hours }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="2">No unused hours available.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="container">
+        <div class="column">
+            <h2>Supervisors Status</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Supervisor</th>
+                        <th>Total Assigned Hours</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user, total_hours in supervisors %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ total_hours }}</td>
+                        <td>
+                            {% if total_hours >= 30 %}
+                                <span style="color: green;">Complete</span>
+                            {% else %}
+                                <span style="color: orange;">Needs {{ 30 - total_hours }} more hours</span>
+                                <form action="{{ url_for('assign_from_pool') }}" method="post" style="display: inline;">
+                                    {{ pool_form.hidden_tag() }}
+                                    {{ pool_form.user_id(value=user.id) }}
+                                    {{ pool_form.hours(size=2, value=30-total_hours) }}
+                                    {{ pool_form.submit() }}
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h2>Current Assignments</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Supervisor</th>
+                        <th>Assignment</th>
+                        <th>Hours</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td>{{ assignment.user.username }}</td>
+                        <td>
+                            {% if assignment.school %}
+                                {{ assignment.school.name }}
+                            {% else %}
+                                {{ assignment.description }}
+                            {% endif %}
+                        </td>
+                        <td>{{ assignment.assigned_hours }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3">No assignments yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

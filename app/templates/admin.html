@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Admin Dashboard</h1>
+
+    <div class="container">
+        <div class="column">
+            <h2>Create New User</h2>
+            <form action="" method="post" novalidate>
+                {{ user_form.hidden_tag() }}
+                <p>
+                    {{ user_form.username.label }}<br>
+                    {{ user_form.username(size=32) }}
+                </p>
+                <p>
+                    {{ user_form.password.label }}<br>
+                    {{ user_form.password(size=32) }}
+                </p>
+                <p>
+                    {{ user_form.role.label }}<br>
+                    {{ user_form.role() }}
+                </p>
+                <p><input type="submit" name="create_user" value="Create User"></p>
+            </form>
+        </div>
+        <div>
+            <h2>Add New School</h2>
+            <form action="" method="post" novalidate>
+                {{ school_form.hidden_tag() }}
+                <p>
+                    {{ school_form.name.label }}<br>
+                    {{ school_form.name(size=32) }}
+                </p>
+                <p>
+                    {{ school_form.required_hours.label }}<br>
+                    {{ school_form.required_hours(size=10) }}
+                </p>
+                <p><input type="submit" name="add_school" value="Add School"></p>
+            </form>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="container">
+        <div class="column">
+            <h2>Manage Users</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.role }}</td>
+                        <td>
+                            {% if user.username != 'admin' %}
+                            <a href="{{ url_for('delete_user', user_id=user.id) }}">Delete</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h2>Manage Schools</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>School Name</th>
+                        <th>Required Hours</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for school in schools %}
+                    <tr>
+                        <td>{{ school.name }}</td>
+                        <td>{{ school.required_hours }}</td>
+                        <td>
+                            <a href="{{ url_for('delete_school', school_id=school.id) }}">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
