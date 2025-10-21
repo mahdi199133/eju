@@ -1,0 +1,41 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>گزارش رزروها</h1>
+<hr>
+<h2>آمار کلی</h2>
+<ul>
+    <li><strong>مجموع درآمد:</strong> {{ total_revenue|floatformat:2 }} تومان</li>
+</ul>
+<hr>
+<h2>وضعیت رزروها</h2>
+<table>
+    <thead>
+        <tr>
+            <th>وضعیت</th>
+            <th>تعداد</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for stat in booking_stats %}
+        <tr>
+            <td>{{ stat.status }}</td>
+            <td>{{ stat.count }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<style>
+    table {
+        width: 50%;
+        border-collapse: collapse;
+    }
+    th, td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+</style>
+{% endblock %}

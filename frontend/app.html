@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد | سامانه رزرو سالن</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>سامانه رزرو</h1>
+            <button onclick="logout()">خروج</button>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-link active" onclick="openTab(event, 'salons')">لیست سالن‌ها</button>
+            <button class="tab-link" onclick="openTab(event, 'bookings')">رزروهای من</button>
+        </nav>
+
+        <!-- Salons Tab -->
+        <div id="salons" class="tab-content" style="display: block;">
+            <h2>لیست سالن‌ها</h2>
+            <div id="booking-section" class="hidden">
+                <h3>رزرو برای سالن: <span id="booking-salon-name"></span></h3>
+                <form id="booking-form" onsubmit="createBooking(event)">
+                    <input type="hidden" id="booking-salon-id">
+                    <label for="start-time">زمان شروع:</label>
+                    <input type="datetime-local" id="start-time" required>
+                    <label for="end-time">زمان پایان:</label>
+                    <input type="datetime-local" id="end-time" required>
+                    <button type="submit">ثبت رزرو</button>
+                    <button type="button" onclick="hideBookingForm()">انصراف</button>
+                </form>
+                <p id="booking-message"></p>
+            </div>
+            <div id="salon-list">
+                <p>در حال بارگذاری سالن‌ها...</p>
+            </div>
+        </div>
+
+        <!-- Bookings Tab -->
+        <div id="bookings" class="tab-content">
+            <h2>رزروهای من</h2>
+            <div id="booking-list">
+                <p>در حال بارگذاری رزروها...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSalons();
+            loadUserBookings();
+        });
+    </script>
+
+    <!-- Edit Booking Modal -->
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeEditModal()">&times;</span>
+            <h2>ویرایش رزرو</h2>
+            <form id="edit-booking-form" onsubmit="updateBooking(event)">
+                <input type="hidden" id="edit-booking-id">
+                <label for="edit-start-time">زمان شروع جدید:</label>
+                <input type="datetime-local" id="edit-start-time" required>
+                <label for="edit-end-time">زمان پایان جدید:</label>
+                <input type="datetime-local" id="edit-end-time" required>
+                <button type="submit">ذخیره تغییرات</button>
+            </form>
+            <p id="edit-message"></p>
+        </div>
+    </div>
+</body>
+</html>
