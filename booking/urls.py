@@ -7,7 +7,8 @@ from .views import (
     UserBookingListView,
     SimulatePaymentView,
     CancelBookingView,
-    UpdateBookingView
+    UpdateBookingView,
+    SalonAvailabilityView
 )
 
 urlpatterns = [
@@ -17,6 +18,7 @@ urlpatterns = [
 
     # User facing APIs
     path('salons/', SalonListView.as_view(), name='salon-list'),
+    path('salons/<int:salon_id>/availability/', SalonAvailabilityView.as_view(), name='salon-availability'),
     path('bookings/create/', BookingCreateView.as_view(), name='booking-create'),
     path('bookings/', UserBookingListView.as_view(), name='user-booking-list'),
     path('bookings/<int:booking_id>/pay/', SimulatePaymentView.as_view(), name='simulate-payment'),

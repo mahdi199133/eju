@@ -89,6 +89,26 @@ class UserBookingListView(ListAPIView):
     def get_queryset(self):
         return Booking.objects.filter(user=self.request.user).order_by('-created_at')
 
+class SalonAvailabilityView(ListAPIView):
+    serializer_class = BookingSerializer # We can reuse this serializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        salon_id = self.kwargs.get('salon_id')
+        start_str = self.request.query_params.get('start')
+        end_str = self.request.query_params.get('end')
+
+        if not all([salon_id, start_str, end_str]):
+            return Booking.objects.none()
+
+        queryset = Booking.objects.filter(
+            salon_id=salon_id,
+            status__in=['PENDING', 'APPROVED', 'PAID'],
+            start_time__lt=end_str,
+            end_time__gt=start_str
+        )
+        return queryset
+
 class SimulatePaymentView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     def post(self, request, booking_id):
