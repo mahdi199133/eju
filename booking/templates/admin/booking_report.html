@@ -1,38 +1,98 @@
 {% extends "admin/base_site.html" %}
+{% load i18n %}
+
 {% block content %}
-<h1>گزارش رزروها</h1>
-<hr>
-<h2>آمار کلی</h2>
-<ul>
-    <li><strong>مجموع درآمد:</strong> {{ total_revenue|floatformat:2 }} تومان</li>
-</ul>
-<hr>
-<h2>وضعیت رزروها</h2>
-<table>
-    <thead>
-        <tr>
-            <th>وضعیت</th>
-            <th>تعداد</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for stat in booking_stats %}
-        <tr>
-            <td>{{ stat.status }}</td>
-            <td>{{ stat.count }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="module">
+    <h1>{% trans 'گزارش پیشرفته رزروها' %}</h1>
+
+    <form method="get" id="report-filter-form">
+        <div style="display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px;">
+            <div>
+                <label for="id_start_date">{% trans 'از تاریخ:' %}</label>
+                <input type="date" name="start_date" id="id_start_date" value="{{ request.GET.start_date }}">
+            </div>
+            <div>
+                <label for="id_end_date">{% trans 'تا تاریخ:' %}</label>
+                <input type="date" name="end_date" id="id_end_date" value="{{ request.GET.end_date }}">
+            </div>
+            <div>
+                <label for="id_salon">{% trans 'سالن:' %}</label>
+                <select name="salon" id="id_salon">
+                    <option value="">{% trans 'همه' %}</option>
+                    {% for salon in salons %}
+                        <option value="{{ salon.id }}" {% if request.GET.salon|add:"0" == salon.id %}selected{% endif %}>{{ salon.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="id_status">{% trans 'وضعیت:' %}</label>
+                <select name="status" id="id_status">
+                    <option value="">{% trans 'همه' %}</option>
+                    {% for status_id, status_name in status_choices %}
+                        <option value="{{ status_id }}" {% if request.GET.status == status_id %}selected{% endif %}>{{ status_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit">{% trans 'اعمال فیلتر' %}</button>
+        </div>
+    </form>
+
+    <hr>
+
+    <h2>{% trans 'نتایج گزارش' %}</h2>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <div>
+            <strong>{% trans 'تعداد نتایج:' %}</strong> {{ bookings|length }}<br>
+            <strong>{% trans 'مجموع درآمد (فیلتر شده):' %}</strong> {{ total_revenue|floatformat:2 }} {% trans 'تومان' %}
+        </div>
+        <div>
+            <a href="?{{ request.GET.urlencode }}&export=pdf" class="button">{% trans 'خروجی PDF' %}</a>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>{% trans 'کاربر' %}</th>
+                <th>{% trans 'سالن' %}</th>
+                <th>{% trans 'زمان شروع' %}</th>
+                <th>{% trans 'زمان پایان' %}</th>
+                <th>{% trans 'هزینه کل' %}</th>
+                <th>{% trans 'وضعیت' %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for booking in bookings %}
+            <tr>
+                <td>{{ booking.user.full_name|default:booking.user.phone_number }}</td>
+                <td>{{ booking.salon.name }}</td>
+                <td>{{ booking.start_time }}</td>
+                <td>{{ booking.end_time }}</td>
+                <td>{{ booking.total_cost|floatformat:2 }}</td>
+                <td>{{ booking.get_status_display }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">{% trans 'هیچ رزروی با این مشخصات یافت نشد.' %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
 <style>
+    #report-filter-form div {
+        display: inline-block;
+        margin-right: 15px;
+    }
     table {
-        width: 50%;
+        width: 100%;
         border-collapse: collapse;
     }
     th, td {
         border: 1px solid #ccc;
         padding: 8px;
-        text-align: left;
+        text-align: right;
     }
     th {
         background-color: #f2f2f2;

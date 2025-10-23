@@ -2,6 +2,9 @@ from django.contrib import admin, messages
 from django.urls import path
 from django.shortcuts import render
 from django.db.models import Count, Sum
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
 from .models import CustomUser, Salon, Booking, Payment, SalonImage
 from .sms_service import get_sms_service
 
@@ -18,9 +21,45 @@ class BookingAdminSite(admin.AdminSite):
         return custom_urls + urls
 
     def report_view(self, request):
-        total_revenue = Payment.objects.aggregate(total=Sum('amount'))['total'] or 0
-        booking_stats = Booking.objects.values('status').annotate(count=Count('status'))
-        context = dict(self.each_context(request), total_revenue=total_revenue, booking_stats=booking_stats)
+        queryset = Booking.objects.select_related('user', 'salon').all().order_by('-start_time')
+
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        salon_id = request.GET.get('salon')
+        status = request.GET.get('status')
+
+        if start_date:
+            queryset = queryset.filter(start_time__date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(end_time__date__lte=end_date)
+        if salon_id:
+            queryset = queryset.filter(salon_id=salon_id)
+        if status:
+            queryset = queryset.filter(status=status)
+
+        total_revenue = queryset.aggregate(total=Sum('total_cost'))['total'] or 0
+
+        context = {
+            'bookings': queryset,
+            'total_revenue': total_revenue,
+            'salons': Salon.objects.all(),
+            'status_choices': Booking.STATUS_CHOICES,
+            **self.each_context(request),
+        }
+
+        # Check if a PDF export is requested
+        if 'export' in request.GET and request.GET['export'] == 'pdf':
+            template = get_template('admin/report_pdf_template.html')
+            html = template.render(context)
+            response = HttpResponse(content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename="booking_report.pdf"'
+
+            pisa_status = pisa.CreatePDF(html.encode("UTF-8"), dest=response, encoding='UTF-8')
+
+            if pisa_status.err:
+                return HttpResponse('We had some errors <pre>' + html + '</pre>')
+            return response
+
         return render(request, "admin/booking_report.html", context)
 
 booking_admin_site = BookingAdminSite(name='booking_admin')
@@ -46,10 +85,15 @@ class BookingAdmin(admin.ModelAdmin):
     search_fields = ('user__phone_number', 'salon__name')
     raw_id_fields = ('user', 'salon')
     actions = ['approve_bookings', 'reject_bookings']
+    # Make total_cost readonly as it will be calculated automatically
     fields = ('user', 'salon', 'status', 'start_time', 'end_time', 'total_cost', 'contract_details')
+    readonly_fields = ('total_cost',)
 
-    def get_readonly_fields(self, request, obj=None):
-        return ['user', 'salon'] if obj else []
+    def save_model(self, request, obj, form, change):
+        if obj.start_time and obj.end_time and obj.salon:
+            duration = (obj.end_time - obj.start_time).total_seconds() / 3600
+            obj.total_cost = duration * obj.salon.price_per_hour
+        super().save_model(request, obj, form, change)
 
     def approve_bookings(self, request, queryset):
         sms_service = get_sms_service()
