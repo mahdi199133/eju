@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.core.cache import cache
 from .models import CustomUser, Salon, Booking, Payment
-from .serializers import SalonSerializer, BookingSerializer, BookingCreateSerializer, BookingUpdateSerializer
+from .serializers import SalonSerializer, BookingSerializer, BookingCreateSerializer, BookingUpdateSerializer, UserProfileSerializer
 from django.utils import timezone
 import uuid
 from decimal import Decimal
@@ -150,3 +150,12 @@ class CancelBookingView(APIView):
         print(f"Booking ID {booking.id} was canceled by the user.")
 
         return Response({"message": "Booking canceled successfully.", "booking_status": "CANCELED"}, status=status.HTTP_200_OK)
+
+from rest_framework.generics import RetrieveUpdateAPIView
+
+class UserProfileView(RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user

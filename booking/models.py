@@ -45,6 +45,14 @@ class Salon(models.Model):
     def __str__(self):
         return self.name
 
+class SalonImage(models.Model):
+    salon = models.ForeignKey(Salon, related_name='images', on_delete=models.CASCADE, verbose_name="سالن")
+    image = models.ImageField(upload_to='salon_images/', verbose_name="تصویر")
+    is_cover = models.BooleanField(default=False, verbose_name="تصویر کاور")
+
+    def __str__(self):
+        return f"تصویر برای {self.salon.name}"
+
 class Booking(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'در انتظار تایید'),

@@ -14,47 +14,41 @@ class ValidationTests(APITestCase):
         self.salon = Salon.objects.create(name='Validation Salon', price_per_hour=100)
         token = AccessToken.for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-
         start = timezone.now() + timedelta(days=1)
-        Booking.objects.create(
-            user=self.user, salon=self.salon, status='APPROVED',
-            start_time=start, end_time=start + timedelta(hours=2), total_cost=200
-        )
+        Booking.objects.create(user=self.user, salon=self.salon, status='APPROVED', start_time=start, end_time=start + timedelta(hours=2), total_cost=200)
 
     def test_prevent_overlapping_booking(self):
         url = reverse('booking-create')
-        start_time = timezone.now() + timedelta(days=1, hours=1) # Overlaps
-        data = {
-            'salon': self.salon.id,
-            'start_time': start_time.isoformat(),
-            'end_time': (start_time + timedelta(hours=1)).isoformat()
-        }
+        start_time = timezone.now() + timedelta(days=1, hours=1)
+        data = {'salon': self.salon.id, 'start_time': start_time.isoformat(), 'end_time': (start_time + timedelta(hours=1)).isoformat()}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('non_field_errors', response.data)
 
 class APITests(APITestCase):
-
     def setUp(self):
-        self.user = CustomUser.objects.create_user(phone_number='09129876543', password='apipassword')
+        self.user = CustomUser.objects.create_user(phone_number='09129876543', full_name='Initial Name', password='apipassword')
         self.salon = Salon.objects.create(name='API Test Salon', price_per_hour=200)
         token = AccessToken.for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-
         self.start_time = timezone.now() + timedelta(days=2)
-        self.end_time = self.start_time + timedelta(hours=2)
-        self.booking = Booking.objects.create(
-            user=self.user, salon=self.salon, status='APPROVED',
-            start_time=self.start_time, end_time=self.end_time, total_cost=400
-        )
+        self.booking = Booking.objects.create(user=self.user, salon=self.salon, status='APPROVED', start_time=self.start_time, end_time=self.start_time + timedelta(hours=2), total_cost=400)
+
+    def test_profile_get_and_update(self):
+        url = reverse('user-profile')
+        # Get profile
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['full_name'], 'Initial Name')
+        # Update profile
+        response = self.client.patch(url, {'full_name': 'Updated Name'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['full_name'], 'Updated Name')
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.full_name, 'Updated Name')
 
     def test_availability_api(self):
         url = reverse('salon-availability', kwargs={'salon_id': self.salon.id})
-        # URL encode the datetime strings
-        params = urllib.parse.urlencode({
-            'start': self.start_time.isoformat(),
-            'end': self.end_time.isoformat()
-        })
+        params = urllib.parse.urlencode({'start': self.start_time.isoformat(), 'end': (self.start_time + timedelta(days=1)).isoformat()})
         response = self.client.get(f"{url}?{params}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)

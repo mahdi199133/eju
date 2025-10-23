@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.urls import path
 from django.shortcuts import render
 from django.db.models import Count, Sum
-from .models import CustomUser, Salon, Booking, Payment
+from .models import CustomUser, Salon, Booking, Payment, SalonImage
 from .sms_service import get_sms_service
 
 class BookingAdminSite(admin.AdminSite):
@@ -20,15 +20,15 @@ class BookingAdminSite(admin.AdminSite):
     def report_view(self, request):
         total_revenue = Payment.objects.aggregate(total=Sum('amount'))['total'] or 0
         booking_stats = Booking.objects.values('status').annotate(count=Count('status'))
-
-        context = dict(
-           self.each_context(request),
-           total_revenue=total_revenue,
-           booking_stats=booking_stats,
-        )
+        context = dict(self.each_context(request), total_revenue=total_revenue, booking_stats=booking_stats)
         return render(request, "admin/booking_report.html", context)
 
 booking_admin_site = BookingAdminSite(name='booking_admin')
+
+class SalonImageInline(admin.TabularInline):
+    model = SalonImage
+    extra = 1
+    fields = ('image', 'is_cover')
 
 class CustomUserAdmin(admin.ModelAdmin):
     list_display = ('phone_number', 'full_name', 'is_staff', 'date_joined')
@@ -38,6 +38,7 @@ class CustomUserAdmin(admin.ModelAdmin):
 class SalonAdmin(admin.ModelAdmin):
     list_display = ('name', 'address', 'price_per_hour')
     search_fields = ('name',)
+    inlines = [SalonImageInline]
 
 class BookingAdmin(admin.ModelAdmin):
     list_display = ('user', 'salon', 'start_time', 'end_time', 'status', 'total_cost', 'contract_details')
@@ -45,30 +46,27 @@ class BookingAdmin(admin.ModelAdmin):
     search_fields = ('user__phone_number', 'salon__name')
     raw_id_fields = ('user', 'salon')
     actions = ['approve_bookings', 'reject_bookings']
-
     fields = ('user', 'salon', 'status', 'start_time', 'end_time', 'total_cost', 'contract_details')
 
     def get_readonly_fields(self, request, obj=None):
-        if obj: # editing an existing object
-            return ('user', 'salon')
-        return ()
+        return ['user', 'salon'] if obj else []
 
     def approve_bookings(self, request, queryset):
         sms_service = get_sms_service()
         updated_count = queryset.update(status='APPROVED')
         for booking in queryset:
-            message = f"رزرو شما برای سالن {booking.salon.name} در تاریخ {booking.start_time.strftime('%Y-%m-%d %H:%M')} تایید شد. لطفا جهت پرداخت اقدام نمایید."
+            message = f"رزرو شما برای سالن {booking.salon.name} تایید شد."
             sms_service.send(booking.user.phone_number, message)
-        self.message_user(request, f"{updated_count} رزرو با موفقیت تایید شد.", messages.SUCCESS)
+        self.message_user(request, f"{updated_count} رزرو تایید شد.", messages.SUCCESS)
     approve_bookings.short_description = "تایید رزروهای انتخاب شده"
 
     def reject_bookings(self, request, queryset):
         sms_service = get_sms_service()
         updated_count = queryset.update(status='REJECTED')
         for booking in queryset:
-            message = f"متاسفانه رزرو شما برای سالن {booking.salon.name} در تاریخ {booking.start_time.strftime('%Y-%m-%d %H:%M')} رد شد."
+            message = f"رزرو شما برای سالن {booking.salon.name} رد شد."
             sms_service.send(booking.user.phone_number, message)
-        self.message_user(request, f"{updated_count} رزرو با موفقیت رد شد.", messages.WARNING)
+        self.message_user(request, f"{updated_count} رزرو رد شد.", messages.WARNING)
     reject_bookings.short_description = "رد رزروهای انتخاب شده"
 
 class PaymentAdmin(admin.ModelAdmin):

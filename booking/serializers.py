@@ -1,11 +1,30 @@
 from rest_framework import serializers
 from django.db.models import Q
-from .models import Salon, Booking, CustomUser
+from .models import Salon, Booking, CustomUser, SalonImage
+
+class SalonImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SalonImage
+        fields = ['image', 'is_cover']
 
 class SalonSerializer(serializers.ModelSerializer):
+    images = SalonImageSerializer(many=True, read_only=True)
+    cover_image = serializers.SerializerMethodField()
+
     class Meta:
         model = Salon
-        fields = '__all__'
+        fields = ['id', 'name', 'address', 'price_per_hour', 'images', 'cover_image']
+
+    def get_cover_image(self, obj):
+        cover = obj.images.filter(is_cover=True).first()
+        if cover:
+            return self.context['request'].build_absolute_uri(cover.image.url)
+        # Return the first image if no cover is set
+        first_image = obj.images.first()
+        if first_image:
+            return self.context['request'].build_absolute_uri(first_image.image.url)
+        return None
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -71,3 +90,9 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("این بازه زمانی برای سالن مورد نظر قبلاً رزرو شده است.")
 
         return data
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['phone_number', 'full_name']
+        read_only_fields = ['phone_number']
