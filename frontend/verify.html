@@ -1,0 +1,31 @@
+{% extends "_base.html" %}
+
+{% block title %}تایید کد | سامانه رزرو سالن{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm auth-card">
+    <div class="card-body">
+        <h2 class="card-title text-center mb-4">تایید کد</h2>
+        <p class="text-center text-muted mb-4">کد ۶ رقمی ارسال شده به شماره <strong id="phone-display"></strong> را وارد کنید.</p>
+        <form id="verify-form" onsubmit="verifyOtp(event)">
+            <div class="mb-3">
+                <label for="otp-code" class="form-label">کد تایید</label>
+                <input type="text" id="otp-code" class="form-control" placeholder="******" required>
+            </div>
+            <button type="submit" class="btn btn-brand w-100">تایید و ورود</button>
+        </form>
+        <p id="message" class="mt-3 text-center"></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const phone = localStorage.getItem('phone_for_verification');
+    if (phone) {
+        document.getElementById('phone-display').textContent = phone;
+    } else {
+        window.location.href = '/';
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>گزارش رزروها</title>
+    <style>
+        @font-face {
+            font-family: 'Vazirmatn';
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            direction: rtl;
+            text-align: right;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+            text-align: right;
+        }
+        h1 {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>گزارش رزروها</h1>
+    <p><strong>تاریخ گزارش:</strong> {% now "Y-m-d H:i" %}</p>
+    <table>
+        <thead>
+            <tr>
+                <th>کاربر</th>
+                <th>سالن</th>
+                <th>زمان شروع</th>
+                <th>زمان پایان</th>
+                <th>هزینه کل (تومان)</th>
+                <th>وضعیت</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for booking in bookings %}
+            <tr>
+                <td>{{ booking.user.full_name|default:booking.user.phone_number }}</td>
+                <td>{{ booking.salon.name }}</td>
+                <td>{{ booking.start_time|date:"Y-m-d H:i" }}</td>
+                <td>{{ booking.end_time|date:"Y-m-d H:i" }}</td>
+                <td>{{ booking.total_cost|floatformat:2 }}</td>
+                <td>{{ booking.get_status_display }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center;">هیچ رزروی یافت نشد.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <hr>
+    <h3>خلاصه گزارش</h3>
+    <ul>
+        <li><strong>تعداد کل رزروها:</strong> {{ bookings|length }}</li>
+        <li><strong>مجموع درآمد:</strong> {{ total_revenue|floatformat:2 }} تومان</li>
+    </ul>
+</body>
+</html>

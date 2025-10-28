@@ -1,0 +1,72 @@
+{% extends "_base.html" %}
+
+{% block title %}داشبورد | سامانه رزرو سالن{% endblock %}
+
+{% block content %}
+<header class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-between py-3 mb-4 border-bottom">
+    <a href="/" class="d-flex align-items-center col-md-3 mb-2 mb-md-0 text-dark text-decoration-none"><span class="fs-4">سامانه رزرو</span></a>
+    <div class="col-md-3 text-end"><button type="button" class="btn btn-outline-danger" onclick="logout()">خروج</button></div>
+</header>
+
+<ul class="nav nav-tabs mb-3" id="appTabs" role="tablist">
+    <li class="nav-item" role="presentation"><button class="nav-link active" id="salons-tab" data-bs-toggle="tab" data-bs-target="#salons" type="button" role="tab">لیست سالن‌ها</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" id="bookings-tab" data-bs-toggle="tab" data-bs-target="#bookings" type="button" role="tab">رزروهای من</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">پروفایل من</button></li>
+</ul>
+
+<div class="tab-content" id="appTabsContent">
+    <div class="tab-pane fade show active" id="salons" role="tabpanel"><div id="salon-list" class="row"></div></div>
+    <div class="tab-pane fade" id="bookings" role="tabpanel"><div id="booking-list"></div></div>
+    <div class="tab-pane fade" id="profile" role="tabpanel">
+        <div class="row justify-content-center"><div class="col-md-8 col-lg-6">
+            <div class="card"><div class="card-body">
+                <h3 class="card-title text-center mb-4">پروفایل کاربری</h3>
+                <form id="profile-form" onsubmit="updateProfile(event)">
+                    <div class="mb-3">
+                        <label class="form-label">شماره موبایل</label>
+                        <input type="text" id="profile-phone" class="form-control" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label for="profile-name" class="form-label">نام کامل</label>
+                        <input type="text" id="profile-name" class="form-control" placeholder="نام خود را وارد کنید">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">ذخیره تغییرات</button>
+                </form>
+            </div></div>
+        </div></div>
+    </div>
+</div>
+
+<!-- Calendar Modal -->
+<div class="modal fade" id="calendarModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">تقویم: <span id="calendar-salon-name"></span></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="calendar"></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">بستن</button><button type="button" class="btn btn-primary" id="confirm-booking-btn" disabled>تایید</button></div></div></div></div>
+<!-- Gallery Modal -->
+<div class="modal fade" id="galleryModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">گالری</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="galleryCarousel" class="carousel slide"><div class="carousel-inner"></div><button class="carousel-control-prev" type="button" data-bs-target="#galleryCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button><button class="carousel-control-next" type="button" data-bs-target="#galleryCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button></div></div></div></div></div>
+<!-- Edit Booking Modal -->
+<div class="modal fade" id="editModal" tabindex="-1"><div class="modal-dialog modal-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">ویرایش</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="edit-booking-form" onsubmit="updateBooking(event)"><input type="hidden" id="edit-booking-id"><div class="mb-3"><label for="edit-start-time">شروع:</label><input type="text" id="edit-start-time" class="form-control"></div><div class="mb-3"><label for="edit-end-time">پایان:</label><input type="text" id="edit-end-time" class="form-control"></div><button type="submit" class="btn btn-primary">ذخیره</button></form></div></div></div></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Init modals and tabs
+        calendarModal = new bootstrap.Modal(document.getElementById('calendarModal'));
+        editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        galleryModal = new bootstrap.Modal(document.getElementById('galleryModal'));
+
+        // Load initial data
+        loadSalons();
+        initializeCalendar();
+
+        // Setup tab listeners
+        document.getElementById('bookings-tab').addEventListener('shown.bs.tab', loadUserBookings);
+        document.getElementById('profile-tab').addEventListener('shown.bs.tab', loadUserProfile);
+
+        // Setup button listeners
+        document.getElementById('confirm-booking-btn').addEventListener('click', confirmBooking);
+
+        // Init date pickers
+        flatpickr("#edit-start-time", { enableTime: true, locale: "fa" });
+        flatpickr("#edit-end-time", { enableTime: true, locale: "fa" });
+    });
+</script>
+{% endblock %}
